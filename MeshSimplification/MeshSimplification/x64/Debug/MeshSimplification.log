@@ -1,2 +1,6 @@
 ﻿  main.cpp
+  Shader.cpp
+  Generating Code...
+  glad.c
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   MeshSimplification.vcxproj -> C:\Users\Savan\My Stuff\Uni\Year 3\Semester 2\COMP3931 - Individual Project\Code\3D-Mesh-Simplification\MeshSimplification\x64\Debug\MeshSimplification.exe
