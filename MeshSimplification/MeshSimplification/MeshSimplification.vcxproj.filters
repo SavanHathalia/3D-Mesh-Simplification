@@ -42,5 +42,7 @@
   <ItemGroup>
     <None Include="res\shaders\default.vert" />
     <None Include="res\shaders\default.frag" />
+    <None Include="res\shaders\light.vert" />
+    <None Include="res\shaders\light.frag" />
   </ItemGroup>
 </Project>
