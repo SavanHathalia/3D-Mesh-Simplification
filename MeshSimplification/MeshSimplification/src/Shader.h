@@ -26,8 +26,13 @@ public:
 	void setInt(const std::string& name, int value);
 
 	void setVec2(const std::string& name, const glm::vec2& vec);
+	void setVec2(const std::string& name, const float& v1, const float& v2);
+
 	void setVec3(const std::string& name, const glm::vec3& vec);
+	void setVec3(const std::string& name, const float& v1, const float& v2, const float& v3);
+
 	void setVec4(const std::string& name, const glm::vec4& vec);
+	void setVec4(const std::string& name, const float& v1, const float& v2, const float& v3, const float& v4);
 
 	void setMat2(const std::string& name, const glm::mat2& mat);
 	void setMat3(const std::string& name, const glm::mat3& mat);
