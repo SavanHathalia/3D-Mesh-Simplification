@@ -12,6 +12,7 @@
 
 #include "Shader.h"
 #include "Camera.h"
+#include "Mesh.h"
 
 // Window resize
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
