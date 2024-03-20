@@ -4,15 +4,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 #include <iostream>
 
-#include "Shader.h"
 #include "Camera.h"
-#include "Mesh.h"
+#include "Shader.h"
+#include "Model.h"
 
 // Window resize
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
