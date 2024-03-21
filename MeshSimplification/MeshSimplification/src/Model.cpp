@@ -160,6 +160,8 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
     */
 
+    faceCount = mesh->mNumFaces;
+
     // return a mesh object created from the extracted mesh data
     return Mesh(vertices, indices, textures);
 }

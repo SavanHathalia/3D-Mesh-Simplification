@@ -1,3 +1,7 @@
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -5,12 +9,49 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #define STB_IMAGE_IMPLEMENTATION
+#include "OpenMesh/Core/IO/MeshIO.hh"
+#include "OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh"
+#include "OpenMesh/Tools/Decimater/DecimaterT.hh"
+#include "OpenMesh/Tools/Decimater/ModQuadricT.hh"
 
 #include <iostream>
 
 #include "Camera.h"
 #include "Shader.h"
 #include "Model.h"
+
+// OpenMesh type
+typedef OpenMesh::TriMesh_ArrayKernelT<> openMesh;
+
+void loadMesh(const std::string& filename, openMesh& mesh) {
+    if (!OpenMesh::IO::read_mesh(mesh, filename)) {
+        std::cerr << "Error loading mesh: " << filename << std::endl;
+    }
+}
+
+void simplifyMesh(openMesh& mesh, size_t target_faces) {
+    // Define the decimater type
+    typedef OpenMesh::Decimater::DecimaterT<openMesh> Decimater;
+
+    // Define the quadric module type
+    typedef OpenMesh::Decimater::ModQuadricT<openMesh>::Handle QuadricModule;
+
+    // Initialize the decimater
+    Decimater decimater(mesh);
+
+    // Add the quadric module to the decimater
+    QuadricModule quadric_module;
+    decimater.add(quadric_module);
+
+    // Initialize the decimater
+    decimater.initialize();
+
+    // Simplify the mesh to the target number of faces
+    decimater.decimate_to_faces(target_faces);
+
+    // Clean up unused vertices
+    mesh.garbage_collection();
+}
 
 // Window resize
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -82,7 +123,7 @@ int main(void)
     std::printf("RENDERER %s\n", glGetString(GL_RENDERER));
     std::printf("VENDOR %s\n", glGetString(GL_VENDOR));
     std::printf("VERSION %s\n", glGetString(GL_VERSION));
-    std::printf("SHADING_LANGUAGE_VERSION %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    std::printf("SHADING_LANGUAGE_VERSION %s\n\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
     // Global GL setup goes here
     //glEnable(GL_FRAMEBUFFER_SRGB);
@@ -92,161 +133,101 @@ int main(void)
     Shader shaderProgram("res/shaders/default.vert", "res/shaders/default.frag");
     Shader lightProgram("res/shaders/light.vert", "res/shaders/light.frag");
 
-    float vertices[] = {
-        // positions          // normals           // texture coords
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
+    float lightVertices[] = {
+        // positions        
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
 
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
 
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
 
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f
     };
-    // positions all containers
-    glm::vec3 cubePositions[] = {
-        glm::vec3(0.0f,  0.0f,  0.0f),
-        glm::vec3(2.0f,  5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3(2.4f, -0.4f, -3.5f),
-        glm::vec3(-1.7f,  3.0f, -7.5f),
-        glm::vec3(1.3f, -2.0f, -2.5f),
-        glm::vec3(1.5f,  2.0f, -2.5f),
-        glm::vec3(1.5f,  0.2f, -1.5f),
-        glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
+
     // positions of the point lights
     glm::vec3 pointLightPositions[] = {
         glm::vec3(0.7f,  0.2f,  2.0f),
-        glm::vec3(2.3f, -3.3f, -4.0f),
-        glm::vec3(-4.0f,  2.0f, -12.0f),
         glm::vec3(0.0f,  0.0f, -3.0f)
     };
 
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // normal attrib
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    // load and create a texture 
-    // -------------------------
-    unsigned int diffuseMap, specularMap;
-    // texture 1
-    // ---------
-    glGenTextures(1, &diffuseMap);
-    glBindTexture(GL_TEXTURE_2D, diffuseMap);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char* data = stbi_load("res/textures/container2.png", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-    // texture 2
-    // ---------
-    glGenTextures(1, &specularMap);
-    glBindTexture(GL_TEXTURE_2D, specularMap);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    data = stbi_load("res/textures/container2_specular.png", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-
-    // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-    // -------------------------------------------------------------------------------------------
-    shaderProgram.Activate();
-    shaderProgram.setInt("material.diffuse", 0);
-    shaderProgram.setInt("material.specular", 1);
-
-    // THIS IS HOW TO SET UP MULTIPLE SHADERS FOR DIFFERENT OBJECTS
-    // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-    unsigned int lightCubeVAO;
+    unsigned int lightCubeVAO, lightVBO;
     glGenVertexArrays(1, &lightCubeVAO);
+    glGenBuffers(1, &lightVBO);
+
     glBindVertexArray(lightCubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(lightVertices), lightVertices, GL_STATIC_DRAW);
 
-    // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     // lighting
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+
+    // Load obj
+    Model myMesh("res/models/bunny/bunny.obj");
+
+    // Simplify mesh
+    openMesh simpMesh;
+    loadMesh("res/models/bunny/bunny.obj", simpMesh);
+    printf("Openmesh mesh load complete. Simplifying mesh...\n");
+
+    // Simplify the mesh to 1000 faces
+    simplifyMesh(simpMesh, 1000);
+    printf("Simplification complete. Saving to file...\n");
+
+    // Save or visualize the simplified mesh
+    OpenMesh::IO::write_mesh(simpMesh, "res/models/simplified_mesh.obj");
+    printf("Saved!\n\n");
+
+    Model newModel("res/models/simplified_mesh.obj");
+
+    // Print number of faces for both unsimplified and simplified meshes
+    printf("Unsimplified mesh face count: %i\nSimplified mesh face count: %i\n\n", myMesh.faceCount, newModel.faceCount);
+
+    // Setup ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 430");
+
+    bool polygonMode = false;
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -261,12 +242,14 @@ int main(void)
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Output cubes
-        // bind textures on corresponding texture units
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularMap);
+        // ImGui setup
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Wireframe mode
+        if (polygonMode) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         shaderProgram.Activate();
 
@@ -291,22 +274,6 @@ int main(void)
         shaderProgram.setFloat("pointLights[1].constant", 1.0f);
         shaderProgram.setFloat("pointLights[1].linear", 0.09f);
         shaderProgram.setFloat("pointLights[1].quadratic", 0.032f);
-        // point light 3
-        shaderProgram.setVec3("pointLights[2].position", pointLightPositions[2]);
-        shaderProgram.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-        shaderProgram.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-        shaderProgram.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
-        shaderProgram.setFloat("pointLights[2].constant", 1.0f);
-        shaderProgram.setFloat("pointLights[2].linear", 0.09f);
-        shaderProgram.setFloat("pointLights[2].quadratic", 0.032f);
-        // point light 4
-        shaderProgram.setVec3("pointLights[3].position", pointLightPositions[3]);
-        shaderProgram.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-        shaderProgram.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-        shaderProgram.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
-        shaderProgram.setFloat("pointLights[3].constant", 1.0f);
-        shaderProgram.setFloat("pointLights[3].linear", 0.09f);
-        shaderProgram.setFloat("pointLights[3].quadratic", 0.032f);
 
         // Material
         shaderProgram.setFloat("material.shininess", 32.0f);
@@ -319,19 +286,16 @@ int main(void)
         glm::mat4 view = camera.GetViewMatrix();
         shaderProgram.setMat4("view", view);
 
-        // render boxes
-        glBindVertexArray(VAO);
-        for (unsigned int i = 0; i < 10; i++)
-        {
-            // calculate the model matrix for each object and pass it to shader before drawing
-            glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-            model = glm::translate(model, cubePositions[i]);
-            float angle = 20.0f * i;
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            shaderProgram.setMat4("model", model);
+        // Model output
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+        shaderProgram.setMat4("model", model);
+        myMesh.Draw(shaderProgram);
 
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
+        shaderProgram.setMat4("model", model);
+        newModel.Draw(shaderProgram);
 
         // Output light itself using the light shaders
         lightProgram.Activate();
@@ -345,8 +309,17 @@ int main(void)
             model = glm::translate(model, pointLightPositions[i]);
             model = glm::scale(model, glm::vec3(0.2f)); // Make it a smaller cube
             lightProgram.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glDrawArrays(GL_TRIANGLES, 0, sizeof(lightVertices) / 3 * sizeof(float));
         }
+
+        // UI window
+        ImGui::Begin("3D Mesh Simplifcation by Savan Hathalia");
+        ImGui::Text("Options:");
+        ImGui::Checkbox("Polygon wireframe mode", &polygonMode);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -354,6 +327,11 @@ int main(void)
         /* Poll for and process events */
         glfwPollEvents();
     }
+
+    // End ImGui functions
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glfwTerminate();
     return 0;
@@ -395,7 +373,8 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
 
     if(key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
-        if (windowActive) windowActive = false;
+        glfwSetCursorPos(window, windowWidth / 2, windowHeight / 2);
+        if (windowActive)windowActive = false;
         else windowActive = true;
     }
 }

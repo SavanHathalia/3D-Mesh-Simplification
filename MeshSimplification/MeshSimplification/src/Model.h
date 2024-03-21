@@ -29,6 +29,7 @@ public:
 	std::vector<Mesh> meshes;
 	std::string directory;
 	bool gammaCorrection;
+	int faceCount = 0;
 
 	// Constructor, expects a filepath to the 3D model
 	Model(const std::string& path, bool gamma = false);
