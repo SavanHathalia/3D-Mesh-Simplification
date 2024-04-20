@@ -43,6 +43,7 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
 Model::Model(const std::string& path, bool gamma) : gammaCorrection(gamma)
 {
     loadModel(path);
+    calcVertexCount();
 }
 
 void Model::Draw(Shader& shader)
@@ -195,4 +196,133 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         }
     }
     return textures;
+}
+
+void Model::calcVertexCount()
+{
+    for (int i = 0; i < meshes.size(); i++)
+    {
+        vertexCount += meshes[i].vertices.size();
+    }
+    vertexCount = (vertexCount + 12) / 6;
+}
+
+void Model::addMesh(Mesh mesh)
+{
+    this->meshes.push_back(mesh);
+    calcVertexCount();
+}
+
+void createHalfEdges(Model& model)
+{
+    for (int i = 0; i < model.meshes.size(); i++)
+    {
+        Mesh& currMesh = model.meshes[i];
+        currMesh.faces = {};
+        for (int j = 0; j < currMesh.indices.size() - 2; j+=3)
+        {
+            // Set vertex and face of half edge
+            currMesh.edges[{currMesh.indices[j], currMesh.indices[j+1]}] = new HalfEdge;
+            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->vertex = &currMesh.vertices[currMesh.indices[j]]; // Vertex
+            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->face->halfEdge = currMesh.edges[{j, j + 1}]; // Face
+
+            currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}] = new HalfEdge;
+            currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}]->vertex = &currMesh.vertices[currMesh.indices[j+1]]; // Vertex
+            currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}]->face->halfEdge = currMesh.edges[{j, j+1}]; // Face
+
+            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}] = new HalfEdge;
+            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->vertex = &currMesh.vertices[currMesh.indices[j+2]]; // Vertex
+            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->face->halfEdge = currMesh.edges[{j, j + 1}]; // Face
+
+            // Populate faces
+            currMesh.faces[j / 3].halfEdge = currMesh.edges[{j, j + 1}];
+        }
+        for (int j = 0; j < currMesh.indices.size() - 2; j += 3)
+        {
+            // Set next half edge
+            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->next = currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}];
+            currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}]->next = currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j]}];
+            currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j]}]->next = currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}];
+
+            // Set twin half edges
+            if (currMesh.edges.find({ currMesh.indices[j + 1], currMesh.indices[j] }) != currMesh.edges.end())
+            {
+                currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->twin = currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j]}];
+                currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j]}]->twin = currMesh.edges[{currMesh.indices[j], currMesh.indices[j+1]}];
+            }
+            if (currMesh.edges.find({ currMesh.indices[j + 2], currMesh.indices[j+1] }) != currMesh.edges.end())
+            {
+                currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}]->twin = currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j+1]}];
+                currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j+1]}]->twin = currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}];
+            }
+            if (currMesh.edges.find({ currMesh.indices[j], currMesh.indices[j+2] }) != currMesh.edges.end())
+            {
+                currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->twin = currMesh.edges[{currMesh.indices[j], currMesh.indices[j+2]}];
+                currMesh.edges[{currMesh.indices[j], currMesh.indices[j+2]}]->twin = currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}];
+            }
+        }
+    }
+}
+
+glm::mat4 calculateQuadric(const Face& face)
+{
+    glm::vec3 pos1 = face.halfEdge->vertex->Position;
+    glm::vec3 pos2 = face.halfEdge->next->vertex->Position;
+    glm::vec3 pos3 = face.halfEdge->next->next->vertex->Position;
+
+    glm::vec3 normal = glm::normalize(glm::cross(pos2 - pos1, pos3 - pos1)); // Find normal
+
+    float d = -glm::dot(normal, pos1); // Calcalate d value in ax + by + cz + d = 0
+
+    glm::vec4 planar = glm::vec4(normal, d); // Planar vector
+
+    return(glm::dot(planar, planar));
+}
+
+float calculateCost(const Vertex& v0, const Vertex& v1)
+{
+    return(glm::dot(glm::vec4(v0.Position, 1), (v0.quadric + v1.quadric) * (glm::vec4(v0.Position, 1))));
+}
+
+Model Model::simplifyModel(const Model& oldModel, const int vertThreshold)
+{
+    // Don't change the original model
+    Model newModel = oldModel;
+
+    // Create half-edge data structure
+    createHalfEdges(newModel);
+
+    // For each mesh in the model
+    for (int i = 0; i < newModel.meshes.size(); i++)
+    {
+        Mesh& currMesh = newModel.meshes[i];
+
+        // Calculate quadrics for each vertex
+        for (int j = 0; j < currMesh.faces.size(); j++)
+        {
+            glm::mat4 quadric = calculateQuadric(currMesh.faces[j]);
+            currMesh.faces[j].halfEdge->vertex->quadric += quadric;
+            currMesh.faces[j].halfEdge->next->vertex->quadric += quadric;
+            currMesh.faces[j].halfEdge->next->next->vertex->quadric += quadric;
+        }
+
+        HalfEdge* leastCostEdge;
+        float leastCost = 9999999;
+        // Calculate cost for each edge and store least cost
+        for (std::map<std::pair<unsigned int, unsigned int>, HalfEdge*>::iterator j = currMesh.edges.begin(); j != currMesh.edges.end(); j++)
+        {
+            float cost = calculateCost(currMesh.vertices[j->first.first], currMesh.vertices[j->first.second]);
+            currMesh.edges[{j->first.first, j->first.second}]->cost = cost;
+            
+            if (cost < leastCost)
+            {
+                leastCost = cost;
+                leastCostEdge = j->second;
+            }
+        }
+
+        // Collapse edge
+
+    }
+    
 }

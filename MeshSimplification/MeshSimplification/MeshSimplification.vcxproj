@@ -137,7 +137,10 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\MyImGui.cpp" />
+    <ClCompile Include="src\MyOpenMesh.cpp" />
     <ClCompile Include="src\Shader.cpp" />
+    <ClCompile Include="src\vendor\file_browser\ImGuiFileDialog.cpp" />
     <ClCompile Include="src\vendor\glad.c" />
     <ClCompile Include="src\vendor\imgui\imgui.cpp" />
     <ClCompile Include="src\vendor\imgui\imgui_demo.cpp" />
@@ -151,7 +154,12 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\MyImGui.h" />
+    <ClInclude Include="src\MyOpenMesh.h" />
     <ClInclude Include="src\Shader.h" />
+    <ClInclude Include="src\vendor\dirent.h" />
+    <ClInclude Include="src\vendor\file_browser\ImGuiFileDialog.h" />
+    <ClInclude Include="src\vendor\file_browser\ImGuiFileDialogConfig.h" />
     <ClInclude Include="src\vendor\imgui\imconfig.h" />
     <ClInclude Include="src\vendor\imgui\imgui.h" />
     <ClInclude Include="src\vendor\imgui\imgui_impl_glfw.h" />

@@ -9,49 +9,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #define STB_IMAGE_IMPLEMENTATION
-#include "OpenMesh/Core/IO/MeshIO.hh"
-#include "OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh"
-#include "OpenMesh/Tools/Decimater/DecimaterT.hh"
-#include "OpenMesh/Tools/Decimater/ModQuadricT.hh"
+#include <file_browser/ImGuiFileDialog.h>
 
 #include <iostream>
+#include <map>
 
 #include "Camera.h"
 #include "Shader.h"
 #include "Model.h"
-
-// OpenMesh type
-typedef OpenMesh::TriMesh_ArrayKernelT<> openMesh;
-
-void loadMesh(const std::string& filename, openMesh& mesh) {
-    if (!OpenMesh::IO::read_mesh(mesh, filename)) {
-        std::cerr << "Error loading mesh: " << filename << std::endl;
-    }
-}
-
-void simplifyMesh(openMesh& mesh, size_t target_faces) {
-    // Define the decimater type
-    typedef OpenMesh::Decimater::DecimaterT<openMesh> Decimater;
-
-    // Define the quadric module type
-    typedef OpenMesh::Decimater::ModQuadricT<openMesh>::Handle QuadricModule;
-
-    // Initialize the decimater
-    Decimater decimater(mesh);
-
-    // Add the quadric module to the decimater
-    QuadricModule quadric_module;
-    decimater.add(quadric_module);
-
-    // Initialize the decimater
-    decimater.initialize();
-
-    // Simplify the mesh to the target number of faces
-    decimater.decimate_to_faces(target_faces);
-
-    // Clean up unused vertices
-    mesh.garbage_collection();
-}
+#include "MyOpenMesh.h"
+#include "MyImGui.h"
 
 // Window resize
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -76,6 +43,10 @@ bool windowActive = false;
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
+
+// Setup ImGui
+std::string originalModelPath = "res/models/bunny/bunny.obj"; // Path to inital bunny model loaded in
+MyImGui myImGui(originalModelPath);
 
 int main(void)
 {
@@ -104,6 +75,7 @@ int main(void)
 
     /* Make the window's context current */
     glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // V-Sync is on.
 
     // Window resize
     glfwSetFramebufferSizeCallback(window, &framebuffer_size_callback); // Account for resizing window
@@ -199,35 +171,14 @@ int main(void)
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
     // Load obj
-    Model myMesh("res/models/bunny/bunny.obj");
+    std::string originalModelPath = "res/models/bunny/bunny.obj";
+    Model originalModel(originalModelPath);
 
-    // Simplify mesh
-    openMesh simpMesh;
-    loadMesh("res/models/bunny/bunny.obj", simpMesh);
-    printf("Openmesh mesh load complete. Simplifying mesh...\n");
+    // Placeholder for simplified mesh
+    Model newModel("res/models/bunny/bunny.obj");
 
-    // Simplify the mesh to 1000 faces
-    simplifyMesh(simpMesh, 1000);
-    printf("Simplification complete. Saving to file...\n");
-
-    // Save or visualize the simplified mesh
-    OpenMesh::IO::write_mesh(simpMesh, "res/models/simplified_mesh.obj");
-    printf("Saved!\n\n");
-
-    Model newModel("res/models/simplified_mesh.obj");
-
-    // Print number of faces for both unsimplified and simplified meshes
-    printf("Unsimplified mesh face count: %i\nSimplified mesh face count: %i\n\n", myMesh.faceCount, newModel.faceCount);
-
-    // Setup ImGui
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 430");
-
-    bool polygonMode = false;
+    // ImGui setup
+    myImGui.setup(window);
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -241,15 +192,6 @@ int main(void)
         /* Render here */
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // ImGui setup
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        // Wireframe mode
-        if (polygonMode) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         shaderProgram.Activate();
 
@@ -291,7 +233,7 @@ int main(void)
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
         model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
         shaderProgram.setMat4("model", model);
-        myMesh.Draw(shaderProgram);
+        originalModel.Draw(shaderProgram);
 
         model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
         shaderProgram.setMat4("model", model);
@@ -303,7 +245,7 @@ int main(void)
         lightProgram.setMat4("view", view);
 
         glBindVertexArray(lightCubeVAO);
-        for (unsigned int i = 0; i < 4; i++)
+        for (unsigned int i = 0; i < 2; i++)
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, pointLightPositions[i]);
@@ -312,14 +254,14 @@ int main(void)
             glDrawArrays(GL_TRIANGLES, 0, sizeof(lightVertices) / 3 * sizeof(float));
         }
 
-        // UI window
-        ImGui::Begin("3D Mesh Simplifcation by Savan Hathalia");
-        ImGui::Text("Options:");
-        ImGui::Checkbox("Polygon wireframe mode", &polygonMode);
-        ImGui::End();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // Load ImGui menus
+        myImGui.newFrame();
+        myImGui.showControlsWindow();
+        myImGui.showOptionsWindow();
+        myImGui.showMeshInfoWindow(originalModel, newModel);
+        myImGui.showImportWindow(originalModel, newModel);
+        myImGui.toggleWireframe();
+        myImGui.render();
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -327,11 +269,6 @@ int main(void)
         /* Poll for and process events */
         glfwPollEvents();
     }
-
-    // End ImGui functions
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
 
     glfwTerminate();
     return 0;
@@ -360,6 +297,10 @@ void processInput(GLFWwindow* window)
             camera.ProcessKeyboard(LEFT, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera.ProcessKeyboard(UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+            camera.ProcessKeyboard(DOWN, deltaTime);
     }
     else
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -376,6 +317,19 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetCursorPos(window, windowWidth / 2, windowHeight / 2);
         if (windowActive)windowActive = false;
         else windowActive = true;
+    }
+    
+    if (windowActive)
+    {
+        if (key == GLFW_KEY_C && action == GLFW_PRESS)
+        {
+            myImGui.bShowControls = !myImGui.bShowControls;
+        }
+
+        if (key == GLFW_KEY_P && action == GLFW_PRESS)
+        {
+            myImGui.bPolygonMode = !myImGui.bPolygonMode;
+        }
     }
 }
 

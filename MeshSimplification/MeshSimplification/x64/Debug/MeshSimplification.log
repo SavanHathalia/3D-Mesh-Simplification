@@ -1,2 +1,7 @@
 ﻿  main.cpp
-  MeshSimplification.vcxproj -> C:\Users\Savan\My Stuff\Uni\Year 3\Semester 2\COMP3931 - Individual Project\Code\3D-Mesh-Simplification\MeshSimplification\x64\Debug\MeshSimplification.exe
+  Mesh.cpp
+  Model.cpp
+C:\Users\Savan\My Stuff\Uni\Year 3\Semester 2\COMP3931 - Individual Project\Code\3D-Mesh-Simplification\MeshSimplification\MeshSimplification\src\Model.cpp(205,47): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
+  MyImGui.cpp
+  Generating Code...
+C:\Users\Savan\My Stuff\Uni\Year 3\Semester 2\COMP3931 - Individual Project\Code\3D-Mesh-Simplification\MeshSimplification\MeshSimplification\src\Model.cpp(328,1): error C4716: 'Model::simplifyModel': must return a value
