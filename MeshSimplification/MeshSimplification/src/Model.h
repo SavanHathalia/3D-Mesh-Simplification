@@ -15,6 +15,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <chrono>
 
 #include "Mesh.h"
 #include "Shader.h"

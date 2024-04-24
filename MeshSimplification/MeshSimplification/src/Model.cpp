@@ -213,62 +213,136 @@ void Model::addMesh(Mesh mesh)
     calcVertexCount();
 }
 
-void createHalfEdges(Model& model)
-{
-    for (int i = 0; i < model.meshes.size(); i++)
+void loadObj(const std::string& filename, Mesh& mesh) {
+
+    // Initiate edges and faces
+    mesh.etest = {};
+    mesh.ftest = {};
+
+    std::ifstream file(filename);
+    std::string line;
+
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string type;
+        iss >> type;
+
+        if (type == "v") {
+            Vertextest vertex;
+            iss >> vertex.Position.x >> vertex.Position.y >> vertex.Position.z;
+            mesh.vtest.push_back(vertex);
+        }
+        else if (type == "vn") {
+            Normaltest normal;
+            iss >> normal.Normal.x >> normal.Normal.y >> normal.Normal.z;
+            mesh.ntest.push_back(normal);
+        }
+        else if (type == "f") {
+            unsigned int i1;
+            unsigned int i2;
+            unsigned int i3;
+
+            unsigned int n1;
+            unsigned int n2;
+            unsigned int n3;
+
+            char slash;
+            iss >> i1 >> slash >> slash >> n1
+                >> i2 >> slash >> slash >> n2
+                >> i3 >> slash >> slash >> n3;
+
+            i1--;
+            i2--;
+            i3--;
+            mesh.itest.push_back(i1);
+            mesh.itest.push_back(i2);
+            mesh.itest.push_back(i3);
+        }
+    }
+
+    for (int i = 0; i < mesh.vtest.size(); i++)
     {
-        Mesh& currMesh = model.meshes[i];
-        currMesh.faces = {};
-        for (int j = 0; j < currMesh.indices.size() - 2; j+=3)
-        {
-            // Set vertex and face of half edge
-            currMesh.edges[{currMesh.indices[j], currMesh.indices[j+1]}] = new HalfEdge;
-            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->vertex = &currMesh.vertices[currMesh.indices[j]]; // Vertex
-            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->face->halfEdge = currMesh.edges[{j, j + 1}]; // Face
-
-            currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}] = new HalfEdge;
-            currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}]->vertex = &currMesh.vertices[currMesh.indices[j+1]]; // Vertex
-            currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}]->face->halfEdge = currMesh.edges[{j, j+1}]; // Face
-
-            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}] = new HalfEdge;
-            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->vertex = &currMesh.vertices[currMesh.indices[j+2]]; // Vertex
-            currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->face->halfEdge = currMesh.edges[{j, j + 1}]; // Face
-
-            // Populate faces
-            currMesh.faces[j / 3].halfEdge = currMesh.edges[{j, j + 1}];
-        }
-        for (int j = 0; j < currMesh.indices.size() - 2; j += 3)
-        {
-            // Set next half edge
-            currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->next = currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}];
-            currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j + 2]}]->next = currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j]}];
-            currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j]}]->next = currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}];
-
-            // Set twin half edges
-            if (currMesh.edges.find({ currMesh.indices[j + 1], currMesh.indices[j] }) != currMesh.edges.end())
-            {
-                currMesh.edges[{currMesh.indices[j], currMesh.indices[j + 1]}]->twin = currMesh.edges[{currMesh.indices[j + 1], currMesh.indices[j]}];
-                currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j]}]->twin = currMesh.edges[{currMesh.indices[j], currMesh.indices[j+1]}];
-            }
-            if (currMesh.edges.find({ currMesh.indices[j + 2], currMesh.indices[j+1] }) != currMesh.edges.end())
-            {
-                currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}]->twin = currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j+1]}];
-                currMesh.edges[{currMesh.indices[j + 2], currMesh.indices[j+1]}]->twin = currMesh.edges[{currMesh.indices[j+1], currMesh.indices[j + 2]}];
-            }
-            if (currMesh.edges.find({ currMesh.indices[j], currMesh.indices[j+2] }) != currMesh.edges.end())
-            {
-                currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}]->twin = currMesh.edges[{currMesh.indices[j], currMesh.indices[j+2]}];
-                currMesh.edges[{currMesh.indices[j], currMesh.indices[j+2]}]->twin = currMesh.edges[{currMesh.indices[j+2], currMesh.indices[j]}];
-            }
-        }
+        mesh.vtest[i].normal = &mesh.ntest[i];
+        mesh.vtest[i].index = i;
     }
 }
 
-glm::mat4 calculateQuadric(const Face& face)
+
+
+void connectFace(Mesh& mesh, unsigned int v1, unsigned int v2, unsigned int v3)
 {
-    glm::vec3 pos1 = face.halfEdge->vertex->Position;
-    glm::vec3 pos2 = face.halfEdge->next->vertex->Position;
-    glm::vec3 pos3 = face.halfEdge->next->next->vertex->Position;
+    Hetest* he1 = new Hetest;
+    Hetest* he2 = new Hetest;
+    Hetest* he3 = new Hetest;
+
+    // Setup vertex, the next edge and the face it belongs to
+    he1->vertex = &mesh.vtest[v1];
+    he2->vertex = &mesh.vtest[v2];
+    he3->vertex = &mesh.vtest[v3];
+
+    he1->next = he2;
+    he2->next = he3;
+    he3->next = he1;
+
+    Facetest* face = new Facetest;
+    face->halfEdge = he1;
+    he1->face = face;
+    he2->face = face;
+    he3->face = face;
+
+    face->halfEdge = he1;
+
+    // Insert into edges map
+    mesh.etest.insert({ {v1, v2}, he1 });
+    mesh.etest.insert({ {v2, v3}, he2 });
+    mesh.etest.insert({ {v3, v1}, he3 });
+
+    // Insert into faces vector
+    mesh.ftest.push_back(face);
+}
+
+void createHalfEdges(Mesh& mesh)
+{
+    int count = 0;
+    printf("here");
+    // Populate edges and faces
+    for (int i = 0; i < mesh.itest.size() - 2; i += 3)
+    {
+        bool swap = false;
+        for (Facetest* face : mesh.ftest)
+        {
+            if ((face->halfEdge->vertex->index == mesh.itest[i] && face->halfEdge->next->vertex->index == mesh.itest[i + 1]) ||
+                (face->halfEdge->vertex->index == mesh.itest[i + 1] && face->halfEdge->next->vertex->index == mesh.itest[i + 2]) ||
+                (face->halfEdge->vertex->index == mesh.itest[i + 2] && face->halfEdge->next->vertex->index == mesh.itest[i]))
+            {
+                swap = true;
+                count++;
+            }
+        }
+        if(swap) connectFace(mesh, mesh.itest[i + 1], mesh.itest[i], mesh.itest[i + 2]);
+        else connectFace(mesh, mesh.itest[i], mesh.itest[i + 1], mesh.itest[i + 2]);
+    }
+    printf("conn: %u\n", count);
+
+    count = 0;
+    // Pair twins
+    for (std::pair<TestFS, Hetest*> edge : mesh.etest)
+    {
+        if (!edge.second->twin) // Pair this edge and its twin
+        {
+            count++;
+            edge.second->twin = mesh.etest[{edge.first.second, edge.first.first}];
+            mesh.etest[{edge.first.second, edge.first.first}]->twin = edge.second;
+        }
+    }
+    printf("pair: %u\n", count);
+}
+
+glm::mat4 calculateQuadric(Facetest* face)
+{
+    glm::vec3 pos1 = face->halfEdge->vertex->Position;
+    glm::vec3 pos2 = face->halfEdge->next->vertex->Position;
+    glm::vec3 pos3 = face->halfEdge->next->next->vertex->Position;
 
     glm::vec3 normal = glm::normalize(glm::cross(pos2 - pos1, pos3 - pos1)); // Find normal
 
@@ -279,50 +353,258 @@ glm::mat4 calculateQuadric(const Face& face)
     return(glm::dot(planar, planar));
 }
 
-float calculateCost(const Vertex& v0, const Vertex& v1)
+float calculateCost(const Vertextest& v0, const Vertextest& v1)
 {
     return(glm::dot(glm::vec4(v0.Position, 1), (v0.quadric + v1.quadric) * (glm::vec4(v0.Position, 1))));
 }
 
-Model Model::simplifyModel(const Model& oldModel, const int vertThreshold)
+Hetest* calcLeastCostEdge(Mesh& mesh)
 {
+    Hetest* leastCostEdge = nullptr;
+    float leastCost = 9999999;
+    // Calculate cost for each edge and store least cost
+    for (std::pair<TestFS, Hetest*> edge : mesh.etest)
+    {
+        float cost = calculateCost(mesh.vtest[edge.first.first], mesh.vtest[edge.first.second]);
+        mesh.etest[{edge.first.first, edge.first.second}]->cost = cost;
+
+        if (cost < leastCost)
+        {
+            leastCost = cost;
+            leastCostEdge = edge.second;
+        }
+    }
+    return leastCostEdge;
+}
+
+Hetest* findLeastCostEdge(Mesh& mesh)
+{
+    Hetest* leastCostEdge = nullptr;
+    float leastCost = 9999999;
+    // Calculate cost for each edge and store least cost
+    for (std::pair<TestFS, Hetest*> edge : mesh.etest)
+    {
+        if (edge.second->cost < leastCost)
+        {
+            leastCost = edge.second->cost;
+            leastCostEdge = edge.second;
+        }
+    }
+    return leastCostEdge;
+}
+
+
+void collapseEdge(Hetest* edge, Mesh& mesh)
+{
+    // Get the halfedge to collapse and its twin
+    Hetest* e1 = edge;
+    Hetest* e2 = edge->twin;
+
+    // Update v1 and v2 to be in the midpoint of both
+    e1->vertex->Position = (e1->vertex->Position + e2->vertex->Position) * 0.5f;
+
+    // Update quadric of v1 by adding both
+    e1->vertex->quadric += e2->vertex->quadric;
+
+    // Mark edges to be removed edges connected to v2 which includes the edge to collapse
+    for (std::pair<TestFS, Hetest*> anEdge : mesh.etest)
+    {
+        if (anEdge.second->vertex == e2->vertex || anEdge.second->next->vertex == e2->vertex) anEdge.second->removed = true;
+    }
+
+    // Update the half edge connectivity
+    // e1 face
+    Hetest* currEdge = e1->next->twin->next;
+
+    // Update faces
+    e1->face->removed = true;
+    currEdge->face->removed = true;
+
+    e1->next = currEdge->next;
+    e1->next->next = currEdge->next->next->twin->next;
+    e1->next->next->next = e1;
+
+    Facetest* newFace = new Facetest;
+    newFace->halfEdge = e1;
+    mesh.ftest.push_back(newFace); // Add new face
+
+    e1->face = newFace;
+    e1->next->face = e1->face;
+    e1->next->next->face = e1->face;
+
+    // Add edge
+    mesh.etest.insert({ {e1->vertex->index, e1->next->vertex->index}, e1 });
+
+    // Calc new cost
+    float cost = calculateCost(mesh.vtest[e1->vertex->index], mesh.vtest[e1->next->vertex->index]);
+    e1->cost = cost;
+
+    // e2 face
+    currEdge = e2->next->next->twin->next;
+    Hetest* nextEdge = currEdge->next->twin->next;
+
+    // Mark faces for removal
+    e2->face->removed = true;
+    currEdge->face->removed = true;
+
+    // Create new edge
+    Hetest* newHalfEdge = new Hetest;
+
+    newHalfEdge->vertex = currEdge->next->vertex;
+    newHalfEdge->next = e2->next;
+    e2->next->next = currEdge;
+    currEdge->next = newHalfEdge;
+
+    // Create new face
+    newFace = new Facetest;
+    newFace->halfEdge = e2;
+    mesh.ftest.push_back(newFace); // Add new face
+
+    currEdge->face = e2->next->face;
+    newHalfEdge->face = e2->next->face;
+
+    // Add edges
+    mesh.etest.insert({ {newHalfEdge->vertex->index, e1->vertex->index}, newHalfEdge });
+
+    // Calc new cost
+    cost = calculateCost(mesh.vtest[newHalfEdge->vertex->index], mesh.vtest[e1->vertex->index]);
+    currEdge->cost = cost;
+
+    while (nextEdge != e1->next && nextEdge->next->twin)
+    {
+        currEdge = nextEdge;
+        nextEdge = nextEdge->next->twin->next;
+
+        // Remove face
+        currEdge->face->removed = true;
+
+        // Create half edges
+        newHalfEdge = new Hetest;
+        Hetest* newHE2 = new Hetest;
+
+        newHalfEdge->vertex = currEdge->next->vertex;
+        newHalfEdge->next = newHE2;
+        newHE2->vertex = e1->vertex;
+        newHE2->next = currEdge;
+        currEdge->next = newHalfEdge;
+
+        // New face
+        newFace = new Facetest;
+        newFace->halfEdge = currEdge;
+        mesh.ftest.push_back(newFace);
+
+        // Set face
+        currEdge->face = newFace;
+        newHalfEdge->face = currEdge->face;
+        newHE2->face = currEdge->face;
+
+        // Add edges
+        mesh.etest.insert({ {newHalfEdge->vertex->index, newHE2->vertex->index}, newHalfEdge });
+        mesh.etest.insert({ {newHE2->vertex->index, currEdge->vertex->index}, newHE2 });
+
+        // Calculate new costs
+        cost = calculateCost(mesh.vtest[newHalfEdge->vertex->index], mesh.vtest[newHE2->vertex->index]);
+        newHalfEdge->cost = cost;
+        cost = calculateCost(mesh.vtest[newHE2->vertex->index], mesh.vtest[currEdge->vertex->index]);
+        newHE2->cost = cost;
+    }
+
+    // Pair twins
+    for (std::pair<TestFS, Hetest*> edge : mesh.etest)
+    {
+        if (!edge.second->twin) // Pair this edge and its twin
+        {
+            edge.second->twin = mesh.etest[{edge.first.second, edge.first.first}];
+            mesh.etest[{edge.first.second, edge.first.first}]->twin = edge.second;
+        }
+    }
+}
+
+void deleteEdgesFaces(Mesh& mesh)
+{
+    // Remove and delete faces
+    for (int i = 0; i < mesh.ftest.size(); i++)
+    {
+        if (mesh.ftest[i]->removed == true)
+        {
+            mesh.ftest.erase(mesh.ftest.begin() + i);
+        }
+    }
+
+    // Remove and delete edges
+    for (std::pair<TestFS, Hetest*> edge : mesh.etest)
+    {
+        if (edge.second->removed == true)
+        {
+            mesh.etest.erase({ edge.first.first, edge.first.second });
+        }
+    }
+}
+
+Mesh extractIndices(Mesh& mesh)
+{
+    std::vector<unsigned int> indices = {};
+
+    // Add face index data
+    for (int i = 0; i < mesh.ftest.size(); i++)
+    {
+        indices.push_back(mesh.ftest[i]->halfEdge->vertex->index);
+        indices.push_back(mesh.ftest[i]->halfEdge->next->vertex->index);
+        indices.push_back(mesh.ftest[i]->halfEdge->next->next->vertex->index);
+    }
+
+    return { mesh.vertices, indices, {} };;
+}
+
+Model Model::simplifyModel(const Model& oldModel, const int vertThreshold)
+ {
     // Don't change the original model
     Model newModel = oldModel;
 
-    // Create half-edge data structure
-    createHalfEdges(newModel);
-
     // For each mesh in the model
-    for (int i = 0; i < newModel.meshes.size(); i++)
+    for (Mesh mesh : newModel.meshes)
     {
-        Mesh& currMesh = newModel.meshes[i];
+        loadObj("res/models/bunny/bunny.obj", mesh);
+
+        // Create half-edge data structure
+        createHalfEdges(mesh);
 
         // Calculate quadrics for each vertex
-        for (int j = 0; j < currMesh.faces.size(); j++)
+        for (int i = 0; i < mesh.ftest.size(); i++)
         {
-            glm::mat4 quadric = calculateQuadric(currMesh.faces[j]);
-            currMesh.faces[j].halfEdge->vertex->quadric += quadric;
-            currMesh.faces[j].halfEdge->next->vertex->quadric += quadric;
-            currMesh.faces[j].halfEdge->next->next->vertex->quadric += quadric;
+            glm::mat4 quadric = calculateQuadric(mesh.ftest[i]);
+            mesh.ftest[i]->halfEdge->vertex->quadric += quadric;
+            mesh.ftest[i]->halfEdge->next->vertex->quadric += quadric;
+            mesh.ftest[i]->halfEdge->next->next->vertex->quadric += quadric;
         }
 
-        HalfEdge* leastCostEdge;
-        float leastCost = 9999999;
-        // Calculate cost for each edge and store least cost
-        for (std::map<std::pair<unsigned int, unsigned int>, HalfEdge*>::iterator j = currMesh.edges.begin(); j != currMesh.edges.end(); j++)
-        {
-            float cost = calculateCost(currMesh.vertices[j->first.first], currMesh.vertices[j->first.second]);
-            currMesh.edges[{j->first.first, j->first.second}]->cost = cost;
-            
-            if (cost < leastCost)
-            {
-                leastCost = cost;
-                leastCostEdge = j->second;
-            }
-        }
+        // Find least cost edge
+        Hetest* leastCostEdge = calcLeastCostEdge(mesh);
 
         // Collapse edge
+        collapseEdge(leastCostEdge, mesh);
 
+        // Remove/delete redundant faces and edges
+        deleteEdgesFaces(mesh);
+
+        newModel.vertexCount--;
+
+        while (newModel.vertexCount != vertThreshold)
+        {
+            leastCostEdge = findLeastCostEdge(mesh);
+
+            collapseEdge(leastCostEdge, mesh);
+            newModel.vertexCount--;
+
+            printf("%d\n", newModel.vertexCount);
+        }
+
+        // Extract the new indices and create mesh out of it
+        mesh = extractIndices(mesh);
+
+        newModel.faceCount = mesh.faces.size();
     }
-    
+
+    return newModel;
 }
+
