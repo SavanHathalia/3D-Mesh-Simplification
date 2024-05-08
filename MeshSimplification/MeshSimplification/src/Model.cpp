@@ -66,6 +66,9 @@ void Model::loadModel(const std::string& path)
     // retrieve the directory path of the filepath
     directory = path.substr(0, path.find_last_of('/'));
 
+    modelName = path.substr(path.find_last_of('\\') + 1, path.size() - path.find_last_of('\\') - 5);
+    modelName = modelName.substr(path.find_last_of('/') + 1, path.size() - path.find_last_of('/') - 5);
+
     // process ASSIMP's root node recursively
     processNode(scene->mRootNode, scene);
 }
@@ -205,6 +208,66 @@ void Model::calcVertexCount()
         vertexCount += meshes[i].vertices.size();
     }
     vertexCount = (vertexCount + 12) / 6;
+}
+
+// Hard coded model transforms
+std::vector<glm::mat4> Model::calcModelMatrix()
+{
+    std::vector<glm::mat4> modelVec = {};
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 newModel = glm::mat4(1.0f);
+
+    if (this->modelName == "bunny")
+    {
+        // Original transform
+        model = glm::translate(model, glm::vec3(-0.5, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+
+        // New model transform
+        newModel = model;
+        newModel = glm::translate(newModel, glm::vec3(3.5f, 0.0f, 0.0f));
+    }
+    else if (this->modelName == "armadillo")
+    {
+        model = glm::translate(model, glm::vec3(1.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+        model = glm::rotate(model, glm::radians(180.f), glm::vec3(0, 1, 0));
+
+        newModel = model;
+        newModel = glm::translate(newModel, glm::vec3(3.f, 0.0f, 0.0f));
+    }
+    else if (this->modelName == "dragon")
+    {
+        model = glm::translate(model, glm::vec3(-0.5f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+        model = glm::rotate(model, glm::radians(180.f), glm::vec3(0, 1, 0));
+
+        newModel = model;
+        newModel = glm::translate(newModel, glm::vec3(-250.f, 0.0f, 0.0f));
+    }
+    else if (this->modelName == "happy")
+    {
+        model = glm::translate(model, glm::vec3(-0.7f, -1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(10.f, 10.f, 10.f));
+
+        newModel = model;
+        newModel = glm::translate(newModel, glm::vec3(0.2f, 0.0f, 0.0f));
+    }
+    else if (this->modelName == "lucy")
+    {
+        model = glm::translate(model, glm::vec3(0.5f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
+        model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+        model = glm::rotate(model, glm::radians(-180.f), glm::vec3(0, 0, 1));
+
+        newModel = model;
+        newModel = glm::translate(newModel, glm::vec3(-1000.0f, 0.0f, 0.0f));
+    }
+
+    modelVec.push_back(model);
+    modelVec.push_back(newModel);
+
+    return modelVec;
 }
 
 void Model::addMesh(Mesh mesh)

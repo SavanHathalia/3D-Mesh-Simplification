@@ -30,6 +30,7 @@ public:
 	std::vector<Texture> textures_loaded; // Stores all textures loaded so far, optimization to make sure texures aren't loaded more than once
 	std::vector<Mesh> meshes;
 	std::string directory;
+	std::string modelName;
 	bool gammaCorrection;
 	int faceCount = 0;
 	int vertexCount = 0;
@@ -44,6 +45,8 @@ public:
 	void addMesh(Mesh mesh);
 
 	Model simplifyModel(const Model& oldModel, const int vertThreshold);
+
+	std::vector<glm::mat4> calcModelMatrix();
 
 private:
 	void loadModel(const std::string& path);

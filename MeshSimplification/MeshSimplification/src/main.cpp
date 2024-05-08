@@ -171,11 +171,10 @@ int main(void)
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
     // Load obj
-    std::string originalModelPath = "res/models/bunny/bunny.obj";
     Model originalModel(originalModelPath);
 
     // Placeholder for simplified mesh
-    Model newModel("res/models/bunny/bunny.obj");
+    Model newModel(originalModelPath);
 
     // ImGui setup
     myImGui.setup(window);
@@ -229,14 +228,11 @@ int main(void)
         shaderProgram.setMat4("view", view);
 
         // Model output
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-        shaderProgram.setMat4("model", model);
+        std::vector<glm::mat4> modelMats = originalModel.calcModelMatrix();
+        shaderProgram.setMat4("model", modelMats[0]);
         originalModel.Draw(shaderProgram);
 
-        model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-        shaderProgram.setMat4("model", model);
+        shaderProgram.setMat4("model", modelMats[1]);
         newModel.Draw(shaderProgram);
 
         // Output light itself using the light shaders
