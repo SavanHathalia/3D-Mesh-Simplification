@@ -276,6 +276,8 @@ void Model::addMesh(Mesh mesh)
     calcVertexCount();
 }
 
+// MY TRIAL IMPLEMENTATION OF THE QEM
+
 void loadObj(const std::string& filename, Mesh& mesh) {
 
     // Initiate edges and faces

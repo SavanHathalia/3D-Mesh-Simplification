@@ -19,6 +19,7 @@ public:
 	// ImGui default settings
 	bool bShowControls = true;
 	bool bPolygonMode = false;
+	bool bShowImportMenu = true;
 
 	std::string filePath;
 	std::string filePathName;

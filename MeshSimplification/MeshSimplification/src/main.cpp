@@ -326,6 +326,11 @@ void processInput(GLFWwindow* window, int key, int scancode, int action, int mod
         {
             myImGui.bPolygonMode = !myImGui.bPolygonMode;
         }
+
+        if (key == GLFW_KEY_M && action == GLFW_PRESS)
+        {
+            myImGui.bShowImportMenu = !myImGui.bShowImportMenu;
+        }
     }
 }
 

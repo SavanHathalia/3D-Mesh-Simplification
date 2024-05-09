@@ -49,6 +49,7 @@ void MyImGui::showControlsWindow()
         ImGui::Text("Q: Down");
         ImGui::Text("C: Toggle controls");
         ImGui::Text("P: Toggle polygon mode");
+        ImGui::Text("M: Show import menu");
         ImGui::End();
     }
 }
@@ -60,6 +61,7 @@ void MyImGui::showOptionsWindow()
     ImGui::Begin("Options:");
     ImGui::Checkbox("C: Toggle controls", &bShowControls);
     ImGui::Checkbox("P: Toggle wireframe mode", &bPolygonMode);
+    ImGui::Checkbox("M: Show import menu", &bShowImportMenu);
     ImGui::End();
 }
 
@@ -72,53 +74,57 @@ void MyImGui::showMeshInfoWindow(const Model& originalModel, const Model& newMod
     ImGui::Text("Face count: %i\n\n", originalModel.faceCount);
     ImGui::Text("Simplified mesh:\nVertex count: %i", newModel.vertexCount);
     ImGui::Text("Face count: %i", newModel.faceCount);
-    //ImGui::Text("Time taken to simplify: %.2fs", simpMesh.timeTaken);
+    ImGui::Text("\nSimplification percent: %.2f%%", ((float)newModel.vertexCount / (float)originalModel.vertexCount) * 100.f);
     ImGui::End();
 }
 
 void MyImGui::showImportWindow(Model& originalModel, Model& newModel)
 {
-    // OBJ import window
-    ImGui::SetNextWindowSize(ImVec2(250, 200));
-    ImGui::Begin("Mesh importer:");
-    ImGui::Text("Loaded obj:\n%s\n----------\n", filePathName.c_str());
-    ImGui::Text("Load obj:");
-    // open Dialog Simple
-    if (ImGui::Button("Browse files...")) {
-        IGFD::FileDialogConfig config;
-        config.path = ".";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".obj", config);
-    }
-    // display
-    if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
-        if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-            filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-            printf("Loaded OBJ file located at: %s\n\n", filePathName.c_str());
-            // action
-            originalModel = Model(filePathName);
-            newModel = Model(filePathName);
-            vertCount = 0;
-            ImGui::Text("Loaded OBJ file located at: %s", filePathName.c_str());
+    if(bShowImportMenu)
+    {
+        // OBJ import window
+        ImGui::SetNextWindowSize(ImVec2(900, 220));
+        ImGui::Begin("Mesh importer:");
+        ImGui::Text("Loaded obj:\n%s\n----------", filePathName.c_str());
+        ImGui::Text("Load obj:");
+        // open Dialog Simple
+        if (ImGui::Button("Browse files...")) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".obj", config);
+        }
+        // display
+        if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+                filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                printf("Loaded OBJ file located at: %s\n\n", filePathName.c_str());
+                // action
+                originalModel = Model(filePathName);
+                newModel = Model(filePathName);
+                vertCount = 0;
+                ImGui::Text("Loaded OBJ file located at: %s", filePathName.c_str());
+            }
+
+            // close
+            ImGuiFileDialog::Instance()->Close();
         }
 
-        // close
-        ImGuiFileDialog::Instance()->Close();
+        // simplify mesh slider
+        ImGui::Text("----------\nDesired vertex count:");
+        ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 80);
+        ImGui::SliderInt("vertices", &vertCount, 0, originalModel.vertexCount);
+        ImGui::Text("Simplification percent: %.2f%%", ((float)vertCount / (float)originalModel.vertexCount) * 100.f);
+        if (ImGui::Button("Simplify")) {
+            printf("Stared simplification...\n");
+            MyOpenMesh simpMesh;
+            simpMesh.loadMesh(filePathName);
+            simpMesh.simplifyMesh(vertCount);
+            simpMesh.writeMesh("res/models/simplified_mesh.obj");
+            newModel = Model("res/models/simplified_mesh.obj");
+        }
+        ImGui::End();
     }
-    
-    // simplify mesh slider
-    ImGui::Text("Desired vertex count:");
-    ImGui::SliderInt( "vertices", &vertCount, 0, originalModel.vertexCount);
-    if (ImGui::Button("Simplify")) {
-        printf("START");
-        MyOpenMesh simpMesh;
-        printf("%s", filePathName.c_str());
-        simpMesh.loadMesh(filePathName);
-        simpMesh.simplifyMesh(vertCount);
-        simpMesh.writeMesh("res/models/simplified_mesh.obj");
-        newModel = Model("res/models/simplified_mesh.obj");
-    }
-    ImGui::End();
 }
 
 void MyImGui::toggleWireframe()
