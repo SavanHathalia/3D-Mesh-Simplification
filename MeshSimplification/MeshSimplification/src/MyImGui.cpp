@@ -114,17 +114,22 @@ void MyImGui::showImportWindow(Model& originalModel, Model& newModel)
         }
 
         // simplify mesh slider
+        //bool changedVal = ImGui::SliderInt("vertices", &vertCount, 0, originalModel.vertexCount);
         ImGui::Text("----------\nDesired vertex count:");
         ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 80);
-        if(ImGui::IsMouseReleased(ImGui::SliderInt("vertices", &vertCount, 0, originalModel.vertexCount)))
+        ImGui::SliderInt("vertices", &vertCount, 0, originalModel.vertexCount);
+        if(ImGui::IsMouseReleased(0))
         {
-            printf("Stared simplification...\n");
-            MyOpenMesh simpMesh;
-            simpMesh.loadMesh(filePathName);
-            simpMesh.simplifyMesh(vertCount);
-            simpMesh.writeMesh("res/models/simplified_mesh.obj");
-            timeTaken = simpMesh.timeTaken;
-            newModel = Model("res/models/simplified_mesh.obj");
+            if (vertCount != 0 && vertCount != newModel.vertexCount)
+            {
+                printf("Stared simplification...\n");
+                MyOpenMesh simpMesh;
+                simpMesh.loadMesh(filePathName);
+                simpMesh.simplifyMesh(vertCount);
+                simpMesh.writeMesh("res/models/simplified_mesh.obj");
+                timeTaken = simpMesh.timeTaken;
+                newModel = Model("res/models/simplified_mesh.obj");
+            }
         }
         ImGui::Text("Simplification percent: %.1f%%", ((float)vertCount / (float)originalModel.vertexCount) * 100.f);
         ImGui::End();
