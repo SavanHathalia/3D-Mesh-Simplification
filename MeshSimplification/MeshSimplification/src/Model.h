@@ -35,6 +35,8 @@ public:
 	int faceCount = 0;
 	int vertexCount = 0;
 
+	float timeTaken;
+
 	// Constructor, expects a filepath to the 3D model
 	Model(const std::string& path, bool gamma = false);
 

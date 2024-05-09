@@ -12,6 +12,8 @@ void MyOpenMesh::simplifyMesh(const int& targetVertices)
 {
     printf("Simplifying mesh...\n");
 
+    const clock_t begin_time = clock();
+
     // Define the decimater type
     typedef OpenMesh::Decimater::DecimaterT<oMesh> Decimater;
 
@@ -35,6 +37,8 @@ void MyOpenMesh::simplifyMesh(const int& targetVertices)
 
     // Clean up unused vertices
     mesh.garbage_collection();
+
+    timeTaken = (1000 * float(clock() - begin_time)) / CLOCKS_PER_SEC;
 
     printf("Simplification complete.\n");
 }

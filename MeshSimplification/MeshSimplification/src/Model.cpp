@@ -48,8 +48,22 @@ Model::Model(const std::string& path, bool gamma) : gammaCorrection(gamma)
 
 void Model::Draw(Shader& shader)
 {
+    GLuint64 startTime, stopTime;
+    unsigned int queryID[2];
+
+    // generate two queries
+    glGenQueries(2, queryID);
+    glQueryCounter(queryID[0], GL_TIMESTAMP);
+
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader);
+
+    glQueryCounter(queryID[1], GL_TIMESTAMP);
+    // get query results
+    glGetQueryObjectui64v(queryID[0], GL_QUERY_RESULT, &startTime);
+    glGetQueryObjectui64v(queryID[1], GL_QUERY_RESULT, &stopTime);
+
+    timeTaken = (stopTime - startTime) / 1000.0;
 }
 
 void Model::loadModel(const std::string& path)

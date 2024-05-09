@@ -68,13 +68,16 @@ void MyImGui::showOptionsWindow()
 void MyImGui::showMeshInfoWindow(const Model& originalModel, const Model& newModel)
 {
     // Mesh info window
-    ImGui::SetNextWindowSize(ImVec2(250, 200));
+    ImGui::SetNextWindowSize(ImVec2(250, 250));
     ImGui::Begin("Mesh Info:");
     ImGui::Text("Original mesh:\nVertex count: %i", originalModel.vertexCount);
-    ImGui::Text("Face count: %i\n\n", originalModel.faceCount);
-    ImGui::Text("Simplified mesh:\nVertex count: %i", newModel.vertexCount);
+    ImGui::Text("Face count: %i", originalModel.faceCount);
+    ImGui::Text("Time taken to load: %.1f us", originalModel.timeTaken);
+    ImGui::Text("\nSimplified mesh:\nVertex count: %i", newModel.vertexCount);
     ImGui::Text("Face count: %i", newModel.faceCount);
-    ImGui::Text("\nSimplification percent: %.2f%%", ((float)newModel.vertexCount / (float)originalModel.vertexCount) * 100.f);
+    ImGui::Text("Time taken to load: %.1f us", newModel.timeTaken);
+    ImGui::Text("\nSimplification percent: %.1f%%", ((float)newModel.vertexCount / (float)originalModel.vertexCount) * 100.f);
+    ImGui::Text("Time taken to simplify: %.1f ms", timeTaken);
     ImGui::End();
 }
 
@@ -114,13 +117,14 @@ void MyImGui::showImportWindow(Model& originalModel, Model& newModel)
         ImGui::Text("----------\nDesired vertex count:");
         ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 80);
         ImGui::SliderInt("vertices", &vertCount, 0, originalModel.vertexCount);
-        ImGui::Text("Simplification percent: %.2f%%", ((float)vertCount / (float)originalModel.vertexCount) * 100.f);
+        ImGui::Text("Simplification percent: %.1f%%", ((float)vertCount / (float)originalModel.vertexCount) * 100.f);
         if (ImGui::Button("Simplify")) {
             printf("Stared simplification...\n");
             MyOpenMesh simpMesh;
             simpMesh.loadMesh(filePathName);
             simpMesh.simplifyMesh(vertCount);
             simpMesh.writeMesh("res/models/simplified_mesh.obj");
+            timeTaken = simpMesh.timeTaken;
             newModel = Model("res/models/simplified_mesh.obj");
         }
         ImGui::End();
