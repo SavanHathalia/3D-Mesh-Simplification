@@ -2,8 +2,19 @@
 
 ## Installation
 
-What are the steps required to install your project? Provide a step-by-step description of how to get the development environment running.
+1) Browse to "MeshSimplification/x64"
+2) Download "Release.zip"
+3) Extract the zip file and run "MeshSimplification.exe"
 
-## Usage
+## Controls
 
-Provide instructions and examples for use. Include screenshots as needed.
+Space: Toggle active screen (all other controls work only if toggled on)
+W: Forward
+A: Left
+S: Right
+D: Backward
+E: Up
+Q: Down
+C: Toggle Controls
+P: Toggle Polygon Mode
+M: Show/Hide Import Menu
