@@ -1,5 +1,9 @@
 # 3D-Mesh-Simplification
 
+## Requirements
+
+x64 Windows OS
+
 ## Installation
 
 1) Browse to "MeshSimplification/x64"
