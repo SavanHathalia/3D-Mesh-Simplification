@@ -8,13 +8,13 @@
 
 ## Controls
 
-Space: Toggle active screen (all other controls work only if toggled on)
-W: Forward
-A: Left
-S: Right
-D: Backward
-E: Up
-Q: Down
-C: Toggle Controls
-P: Toggle Polygon Mode
-M: Show/Hide Import Menu
+Space: Toggle active screen (all other controls work only if toggled on) <br/>
+W: Forward <br/>
+A: Left <br/>
+S: Right <br/>
+D: Backward <br/>
+E: Up <br/>
+Q: Down <br/>
+C: Toggle Controls <br/>
+P: Toggle Polygon Mode <br/>
+M: Show/Hide Import Menu <br/>
