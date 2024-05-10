@@ -26,3 +26,5 @@ M: Show/Hide Import Menu <br/>
 ## Usage
 Move slider to desired vertex count to simplify to. <br/>
 The .obj file will automatically be created upon simplification into /res/models/simplified_mesh.obj
+
+Link to video demonstration: https://youtu.be/8PXvJByTtBw
