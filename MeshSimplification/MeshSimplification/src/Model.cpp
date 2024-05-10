@@ -43,7 +43,6 @@ unsigned int TextureFromFile(const char* path, const std::string& directory, boo
 Model::Model(const std::string& path, bool gamma) : gammaCorrection(gamma)
 {
     loadModel(path);
-    calcVertexCount();
 }
 
 void Model::Draw(Shader& shader)
@@ -178,7 +177,8 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
     */
 
-    faceCount = mesh->mNumFaces;
+    faceCount += mesh->mNumFaces;
+    indexCount += faceCount / 3.0f;
 
     // return a mesh object created from the extracted mesh data
     return Mesh(vertices, indices, textures);
@@ -213,15 +213,6 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
         }
     }
     return textures;
-}
-
-void Model::calcVertexCount()
-{
-    for (int i = 0; i < meshes.size(); i++)
-    {
-        vertexCount += meshes[i].vertices.size();
-    }
-    vertexCount = (vertexCount + 12) / 6;
 }
 
 // Hard coded model transforms
@@ -287,7 +278,6 @@ std::vector<glm::mat4> Model::calcModelMatrix()
 void Model::addMesh(Mesh mesh)
 {
     this->meshes.push_back(mesh);
-    calcVertexCount();
 }
 
 // MY TRIAL IMPLEMENTATION OF THE QEM
@@ -666,16 +656,16 @@ Model Model::simplifyModel(const Model& oldModel, const int vertThreshold)
         // Remove/delete redundant faces and edges
         deleteEdgesFaces(mesh);
 
-        newModel.vertexCount--;
+        newModel.indexCount--;
 
-        while (newModel.vertexCount != vertThreshold)
+        while (newModel.indexCount != vertThreshold)
         {
             leastCostEdge = findLeastCostEdge(mesh);
 
             collapseEdge(leastCostEdge, mesh);
-            newModel.vertexCount--;
+            newModel.indexCount--;
 
-            printf("%d\n", newModel.vertexCount);
+            printf("%d\n", newModel.indexCount);
         }
 
         // Extract the new indices and create mesh out of it

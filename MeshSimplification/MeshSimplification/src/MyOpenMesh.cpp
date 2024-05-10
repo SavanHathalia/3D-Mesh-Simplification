@@ -32,7 +32,7 @@ void MyOpenMesh::simplifyMesh(const int& targetVertices)
 
     double startTime = glfwGetTime();
     // Simplify the mesh to the target number of vertices
-    decimater.decimate_to_faces(targetVertices);
+    decimater.decimate_to_faces(0Ui64, targetVertices*3);
     timeTaken = glfwGetTime() - startTime;
 
     // Clean up unused vertices

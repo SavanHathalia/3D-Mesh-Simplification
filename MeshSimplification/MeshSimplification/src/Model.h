@@ -33,9 +33,9 @@ public:
 	std::string modelName;
 	bool gammaCorrection;
 	int faceCount = 0;
-	int vertexCount = 0;
+	int indexCount = 0;
 
-	float timeTaken;
+	float timeTaken = 0.0f;
 
 	// Constructor, expects a filepath to the 3D model
 	Model(const std::string& path, bool gamma = false);
@@ -58,8 +58,6 @@ private:
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
 
 	std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
-
-	void calcVertexCount();
 };
 
 #endif

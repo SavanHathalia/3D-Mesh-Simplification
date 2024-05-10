@@ -24,7 +24,7 @@ public:
 	std::string filePath;
 	std::string filePathName;
 
-	int vertCount = 0;
+	int vertexCount = 0;
 	float timeTaken = 0.0f; // Time to simplify mesh
 
 	MyImGui(std::string& originalModelPath);
